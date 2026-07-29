@@ -1,0 +1,74 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum JobStatus {
+  upcoming
+  ongoing
+  closed
+  result_declared
+}
+
+enum ScrapeStatus {
+  success
+  error
+}
+
+model Job {
+  id                     String    @id @default(uuid())
+  sourceUrl              String    @unique @map("source_url")
+  contentHash            String    @map("content_hash")
+  title                  String
+  organization           String
+  category               String
+  state                  String?
+  qualification          String?
+  vacancies              Int?
+  location               String?
+  notificationDate       DateTime? @map("notification_date")
+  applicationStartDate   DateTime? @map("application_start_date")
+  applicationEndDate     DateTime? @map("application_end_date")
+  examDate               DateTime? @map("exam_date")
+  officialPdfUrl         String?   @map("official_pdf_url")
+  applyLink              String?   @map("apply_link")
+  status                 JobStatus @default(upcoming)
+  sourceSite             String    @map("source_site")
+  isActive               Boolean   @default(true) @map("is_active")
+  scrapedAt              DateTime  @default(now()) @map("scraped_at")
+  updatedAt              DateTime  @updatedAt @map("updated_at")
+
+  @@index([status, category])
+  @@map("jobs")
+}
+
+model Source {
+  id             String    @id @default(uuid())
+  name           String    @unique
+  baseUrl        String    @map("base_url")
+  scrapeConfig   Json      @map("scrape_config")
+  isActive       Boolean   @default(true) @map("is_active")
+  lastScrapedAt  DateTime? @map("last_scraped_at")
+
+  scrapeLogs ScrapeLog[]
+
+  @@map("sources")
+}
+
+model ScrapeLog {
+  id           String       @id @default(uuid())
+  sourceId     String       @map("source_id")
+  source       Source       @relation(fields: [sourceId], references: [id])
+  runAt        DateTime     @default(now()) @map("run_at")
+  status       ScrapeStatus
+  jobsFound    Int          @default(0) @map("jobs_found")
+  jobsNew      Int          @default(0) @map("jobs_new")
+  jobsUpdated  Int          @default(0) @map("jobs_updated")
+  errorMessage String?      @map("error_message")
+
+  @@map("scrape_logs")
+}

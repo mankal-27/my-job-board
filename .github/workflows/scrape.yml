@@ -1,0 +1,34 @@
+name: Daily job scrape
+
+on:
+  schedule:
+    # 03:00 UTC = 08:30 IST
+    - cron: "0 3 * * *"
+  workflow_dispatch: {}
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - run: npm install
+
+      - name: Generate Prisma client
+        run: npm run generate --workspace=apps/api
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+
+      - name: Run scraper
+        run: npm run scrape
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+
+      - name: Recompute job status
+        run: npm run recompute-status --workspace=packages/scraper
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
